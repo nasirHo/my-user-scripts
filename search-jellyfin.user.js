@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2025-11-15
-// @description  search on jellyfin
+// @version      0.1.1
+// @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
 // @match        https://www.avbase.net/*
@@ -32,7 +32,7 @@
   );
   const JELLYFIN_API_KEY = GM_getValue("JELLYFIN_API_KEY", "");
   const JELLYFIN_LIB_ID = GM_getValue("JELLYFIN_LIB_ID", "");
-  let jellyfinRequester = getJellyfinRequester(JELLYFIN_API_URL, JELLYFIN_API_KEY);
+  let jellyfinRequester = getJellyfinRequester(JELLYFIN_API_URL, JELLYFIN_API_KEY, JELLYFIN_LIB_ID);
 
   const runFullConfig = () => {
     const key = prompt("Enter your Jellyfin API Key", JELLYFIN_API_KEY);
