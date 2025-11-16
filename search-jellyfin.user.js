@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2025-11-14
+// @version      2025-11-15
 // @description  search on jellyfin
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -13,6 +13,9 @@
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
 // @connect      192.168.52.2
+// @require      https://raw.githubusercontent.com/nasirHo/my-user-scripts/refs/heads/main/lib/utils.js
+// @updateURL    https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/search-jellyfin.user.js
+// @downloadURL  https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/search-jellyfin.user.js
 // ==/UserScript==
 
 (async function () {
