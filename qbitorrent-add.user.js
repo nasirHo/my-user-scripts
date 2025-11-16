@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         add-to-qb
 // @namespace    http://tampermonkey.net/
-// @version      0.1.0
+// @version      0.1.1
 // @description  interact with qbitorrent at certain website
 // @author       nasirho
 // @match        https://*.sehuatang.org/thread*
@@ -115,9 +115,9 @@
         foundTorrents.forEach((torrent) => {
           console.log(
             `- Name: ${torrent.name}\n` +
-              `- State: ${torrent.state}\n` +
-              `- Progress: ${(torrent.progress * 100).toFixed(1)}%\n` +
-              `- Hash: ${torrent.hash}`,
+            `- State: ${torrent.state}\n` +
+            `- Progress: ${(torrent.progress * 100).toFixed(1)}%\n` +
+            `- Hash: ${torrent.hash}`,
           );
           console.log(torrent);
         });
@@ -128,6 +128,7 @@
       }
     } catch (error) {
       console.error("The query failed:", error);
+      throw error; // Re-throw to be caught by the calling function
     }
     return foundTorrents;
   };
