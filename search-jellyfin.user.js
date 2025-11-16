@@ -21,7 +21,6 @@
 (async function () {
   "use strict";
 
-  // Your code here...
   const JELLYFIN_API_URL = GM_getValue(
     "JELLYFIN_API_URL",
     "http://192.168.52.2:8096",
@@ -32,7 +31,7 @@
   );
   const JELLYFIN_API_KEY = GM_getValue("JELLYFIN_API_KEY", "");
   const JELLYFIN_LIB_ID = GM_getValue("JELLYFIN_LIB_ID", "");
-  let jellyfinRequester = getJellyfinRequester(JELLYFIN_API_URL, JELLYFIN_API_KEY, JELLYFIN_LIB_ID);
+  const jellyfinRequester = getJellyfinRequester(JELLYFIN_API_URL, JELLYFIN_API_KEY, JELLYFIN_LIB_ID);
 
   const runFullConfig = () => {
     const key = prompt("Enter your Jellyfin API Key", JELLYFIN_API_KEY);
@@ -59,27 +58,6 @@
     window.location.reload();
   };
   GM_registerMenuCommand("⚙️ Configure Jellyfin Script", runFullConfig);
-
-  // const showConfigBanner = () => {
-  //   // Check if banner already exists to avoid duplicates
-  //   if (document.getElementById("jellyfin-config-banner")) return;
-  //
-  //   const banner = document.createElement("div");
-  //   banner.id = "jellyfin-config-banner";
-  //
-  //   const text = document.createElement("span");
-  //   text.textContent =
-  //     "The 'Search on Jellyfin' userscript needs configuration.";
-  //
-  //   const button = document.createElement("button");
-  //   button.textContent = "Configure Now";
-  //
-  //   button.onclick = runFullConfig;
-  //
-  //   banner.appendChild(text);
-  //   banner.appendChild(button);
-  //   document.body.appendChild(banner);
-  // };
   GM_addStyle(`
         .jellyfin-link {
             display: inline-block;
@@ -131,61 +109,6 @@
             cursor: pointer;
         }
     `);
-
-  // /**
-  //  * Generic helper to make a GET request to the Jellyfin API.
-  //  * @param {string} endpoint - The API endpoint (e.g., "/Items" or "/Persons").
-  //  * @param {object} params - An object of query parameters.
-  //  * @returns {Promise<object>} - A promise that resolves with the search results.
-  //  */
-  // const jellyfinRequest = (endpoint, params) => {
-  //   // Use URL and URLSearchParams for safe and easy URL building
-  //   const url = new URL(endpoint, JELLYFIN_API_URL);
-  //   url.search = new URLSearchParams(params).toString();
-  //
-  //   return new Promise((resolve, reject) => {
-  //     GM_xmlhttpRequest({
-  //       method: "GET",
-  //       url: url.href,
-  //       headers: {
-  //         "X-Emby-Token": JELLYFIN_API_KEY,
-  //         "Content-Type": "application/json",
-  //       },
-  //       onload: (response) => {
-  //         if (response.status >= 200 && response.status < 300) {
-  //           const data = JSON.parse(response.responseText);
-  //           resolve({
-  //             items: data.Items.map(({ Id, ServerId }) => ({ Id, ServerId })),
-  //             count: data.TotalRecordCount,
-  //           });
-  //         } else {
-  //           reject(`Server responded with status: ${response.status}`);
-  //         }
-  //       },
-  //       onerror: (error) => {
-  //         reject("Request failed. Check Jellyfin server connection.");
-  //         console.error("Jellyfin request error:", error);
-  //       },
-  //     });
-  //   });
-  // };
-  //
-  // // Your search functions are now simple one-liners
-  // const searchJellyfin = (keyword) => {
-  //   return jellyfinRequest("/Items", {
-  //     searchTerm: keyword,
-  //     parentId: JELLYFIN_LIB_ID,
-  //     includeItemTypes: "Movie",
-  //     recursive: "true",
-  //   });
-  // };
-  //
-  // const searchPersonOnJellyfin = (keyword) => {
-  //   return jellyfinRequest("/Persons", {
-  //     searchTerm: keyword,
-  //   });
-  // };
-
   const site_observers = {
     "javdb.com": {
       isOkToAdd: () => {

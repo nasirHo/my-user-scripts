@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         add-to-qb
 // @namespace    http://tampermonkey.net/
-// @version      2025-11-14
-// @description  add to qbitorrent
+// @version      0.1.0
+// @description  interact with qbitorrent at certain website
 // @author       nasirho
 // @match        https://*.sehuatang.org/thread*
 // @match        https://*.sehuatang.org/forum.php?mod=viewthread*
@@ -15,6 +15,9 @@
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @connect      192.168.52.2
+// @require      https://raw.githubusercontent.com/nasirHo/my-user-scripts/refs/heads/main/lib/utils.js
+// @updateURL    https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/qbitorrent-add.user.js
+// @downloadURL  https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/qbitorrent-add.user.js
 // ==/UserScript==
 
 (function () {
@@ -30,6 +33,7 @@
     // Internal key, not for users
     cookieKey: "qb-cookies",
   };
+  const qbRequester = getQbRequester(QB_CONFIG);
 
   // --- Configuration Menu ---
   function runFullConfig() {
@@ -53,20 +57,6 @@
   }
 
   GM_registerMenuCommand("⚙️ Configure qBittorrent Script", runFullConfig);
-
-  // Function to show a "Config Needed" banner
-  function showConfigBanner() {
-    if (document.getElementById("qb-config-banner")) return;
-    const banner = document.createElement("div");
-    banner.id = "qb-config-banner";
-    banner.innerHTML = `
-        'add-to-qb' script needs configuration.
-        <button id="qb-config-btn">Configure Now</button>
-    `;
-    document.body.appendChild(banner);
-    document.getElementById("qb-config-btn").onclick = runFullConfig;
-  }
-
   GM_addStyle(`
     .qb-action-container {
         display: flex;
@@ -112,161 +102,10 @@
         border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold;
     }
 `);
-  const gmRequest = (options) => {
-    return new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        ...options,
-        onload: (response) => resolve(response),
-        onerror: (error) => reject(error),
-        ontimeout: (error) => reject(new Error("Request timed out.")),
-      });
-    });
-  };
-  const performLogin = async () => {
-    console.log("Performing login...");
-    try {
-      const response = await gmRequest({
-        method: "POST",
-        url: `${QB_CONFIG.url}/api/v2/auth/login`,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        data: `username=${encodeURIComponent(QB_CONFIG.username)}&password=${encodeURIComponent(QB_CONFIG.password)}`,
-      });
-
-      if (response.status === 200) {
-        const cookieMatch = response.responseHeaders.match(/SID=[^;]+/);
-        if (cookieMatch) {
-          const newCookie = cookieMatch[0];
-          console.log("Login successful, got new cookie:", newCookie);
-          await GM_setValue(QB_CONFIG.cookieKey, newCookie);
-          return newCookie; // Resolve with the new cookie
-        } else {
-          // This shouldn't happen, but good to check
-          throw new Error("Login successful, but no cookie was returned.");
-        }
-      } else {
-        // Login failed (wrong credentials)
-        await GM_setValue(QB_CONFIG.cookieKey, null); // Clear any bad cookie
-        throw new Error("qBittorrent login failed! Check credentials.");
-      }
-    } catch (error) {
-      alert("Could not connect to qBittorrent for login.");
-      console.error("Login request failed:", error);
-      throw error; // Re-throw to be caught by the calling function
-    }
-  };
-  /**
-   * Makes an authenticated request to the qBittorrent API.
-   * Handles session expiry and re-login automatically.
-   * @param {string} endpoint - The API endpoint (e.g., "/api/v2/torrents/add").
-   * @param {object} options - Optional settings.
-   * @param {string} [options.method='GET'] - The HTTP method.
-   * @param {string} [options.data=null] - The data to send (for POST requests).
-   * @param {object} [options.headers={}] - Any additional headers.
-   * @param {boolean} [options.isRetry=false] - Internal flag to prevent infinite retries.
-   * @returns {Promise<object>} The full response object from gmRequest.
-   */
-  const qbRequest = async (endpoint, options = {}) => {
-    const {
-      method = "GET",
-      data = null,
-      headers = {},
-      isRetry = false,
-    } = options;
-    const url = `${QB_CONFIG.url}${endpoint}`;
-
-    // 1. Get the last known cookie
-    let cookie = await GM_getValue(QB_CONFIG.cookieKey, null);
-
-    const requestHeaders = { ...headers, Cookie: cookie };
-    if (method === "POST" && data) {
-      requestHeaders["Content-Type"] = "application/x-www-form-urlencoded";
-    }
-
-    // 2. Try the request
-    const response = await gmRequest({
-      method: method,
-      url: url,
-      headers: requestHeaders,
-      data: data,
-    });
-
-    // 3. Check for unauthorized error
-    if ((response.status === 401 || response.status === 403) && !isRetry) {
-      console.log("qB session expired or invalid. Re-logging in...");
-
-      // 4. If unauthorized, perform login
-      const newCookie = await performLogin(); // This will throw an error if it fails
-
-      // 5. Retry the *original* request with the new cookie
-      console.log("Re-login successful. Retrying original request...");
-      return await qbRequest(endpoint, { ...options, isRetry: true });
-    }
-
-    // 6. Check for other HTTP errors
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-    }
-
-    // 7. Success!
-    return response;
-  };
-  const addTorrent = async (torrentLink) => {
-    try {
-      const response = await qbRequest("/api/v2/torrents/add", {
-        method: "POST",
-        data: `urls=${encodeURIComponent(torrentLink)}`,
-      });
-
-      if (response.responseText === "Ok.") {
-        alert("Torrent sent successfully!");
-        window.location.reload();
-      } else {
-        alert(`Failed to add torrent: ${response.responseText}`);
-      }
-    } catch (error) {
-      alert(`An error occurred while sending the torrent: ${error.message}`);
-    }
-  };
-
-  const removeTorrent = async (hashes, deleteFiles) => {
-    try {
-      await qbRequest("/api/v2/torrents/delete", {
-        method: "POST",
-        data: `hashes=${hashes}&deleteFiles=${deleteFiles}`,
-      });
-
-      // If qbRequest didn't throw, we assume success
-      alert("Torrent delete successfully!");
-      // Refresh the page to update the button status
-      window.location.reload();
-    } catch (error) {
-      alert(`An error occurred while deleting the torrent: ${error.message}`);
-    }
-  };
-
-  const queryTorrentsByName = async (name) => {
-    try {
-      console.log(`Querying torrents with name including "${name}"...`);
-      const response = await qbRequest("/api/v2/torrents/info");
-
-      const allTorrents = JSON.parse(response.responseText);
-      const searchName = name.toLowerCase();
-
-      const matchingTorrents = allTorrents.filter((torrent) =>
-        torrent.name.toLowerCase().includes(searchName),
-      );
-
-      return matchingTorrents;
-    } catch (error) {
-      alert(`Error querying torrents: ${error.message}`);
-      return []; // Return an empty array on failure
-    }
-  };
-
   const findTorrents = async (searchName) => {
     let foundTorrents = [];
     try {
-      foundTorrents = await queryTorrentsByName(searchName);
+      foundTorrents = await qbRequester.queryTorrentsByName(searchName);
 
       if (foundTorrents.length > 0) {
         console.log(
@@ -276,9 +115,9 @@
         foundTorrents.forEach((torrent) => {
           console.log(
             `- Name: ${torrent.name}\n` +
-            `- State: ${torrent.state}\n` +
-            `- Progress: ${(torrent.progress * 100).toFixed(1)}%\n` +
-            `- Hash: ${torrent.hash}`,
+              `- State: ${torrent.state}\n` +
+              `- Progress: ${(torrent.progress * 100).toFixed(1)}%\n` +
+              `- Hash: ${torrent.hash}`,
           );
           console.log(torrent);
         });
@@ -331,9 +170,13 @@
     return button;
   }
 
-  const createButtons = async (site_conf) => {
+  const main_func = async (site_conf) => {
     if (!QB_CONFIG.username || !QB_CONFIG.password) {
-      showConfigBanner(); // Show the banner
+      showConfigBanner(
+        "qb-config-banner",
+        "'add-to-qb' script needs configuration.",
+        runFullConfig,
+      ); // Show the banner
       console.error("qBittorrent credentials not set.");
       return; // Stop the script
     }
@@ -357,7 +200,7 @@
     buttonContainer.appendChild(
       createActionButton("➤ Send to qB", "qb-button-send", () => {
         console.log("Sending link:", site_conf.getMags());
-        addTorrent(site_conf.getMags());
+        qbRequester.addTorrent(site_conf.getMags());
       }),
     );
 
@@ -410,7 +253,7 @@
               `Do you want to delete the torrent?\n\n${torrent.name}\nAdded: ${date}`,
             )
           ) {
-            removeTorrent(torrent.hash, true);
+            qbRequester.removeTorrent(torrent.hash, true);
           }
         });
         buttonContainer.prepend(icon); // Add to the front
@@ -422,6 +265,6 @@
 
   window.addEventListener("load", async () => {
     console.log("add-qb script fired");
-    createButtons(site_settings[window.location.hostname.replace("www\.", "")]);
+    main_func(site_settings[window.location.hostname.replace("www\.", "")]);
   });
 })();
