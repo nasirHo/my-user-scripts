@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1b
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -14,6 +14,7 @@
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @connect      192.168.52.2
+// @connect      sukebei.nyaa.si
 // @require      https://raw.githubusercontent.com/nasirHo/my-user-scripts/refs/heads/main/lib/utils.js
 // @updateURL    https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/search-jellyfin.user.js
 // @downloadURL  https://github.com/nasirHo/my-user-scripts/raw/refs/heads/main/search-jellyfin.user.js
@@ -79,6 +80,9 @@
               Arial, sans-serif;
             line-height: 1.2; /* Prevent text from being cut off */
           }
+          .tag:not(body).nyaa-link {
+            color: #fff
+          }
           .tag:not(body).nyaa-link-found,
           .jellyfin-link-found {
             background-color: #4caf50; /* Green */
@@ -132,11 +136,11 @@
         return document.querySelectorAll("div.movie-list>div.item").length > 0;
       },
       addSearchBtn: (item) => {
-        const originalTag = item.querySelector("div.tags>span.tag");
-        if (originalTag && originalTag.textContent[0] === "含") {
-          // no need to search
-        } else {
-          // need to search
+        const anchor = item.querySelector("div.tags");
+        if (
+          anchor.children.length === 0 ||
+          anchor.children[0].textContent[0] !== "含"
+        ) {
           const keyword = item.querySelector(
             "div.video-title>strong",
           ).textContent;
@@ -146,7 +150,9 @@
           }
           const newTag = document.createElement("span");
           newTag.classList.add("tag", "nyaa-link", "nyaa-link-click-to-search");
+          newTag.textContent = "🔍 Hover to Search"
           create_search_element(newTag, keyword, getOffkabNyaa);
+          anchor.appendChild(newTag);
         }
       },
       getObserveElements: () => {
