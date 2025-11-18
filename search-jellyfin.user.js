@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      0.1.2
+// @version      2.0
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
 // @match        https://www.avbase.net/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=jellyfin.org
 // @grant        GM_xmlhttpRequest
+// @grant        GM_openInTab
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -61,9 +62,10 @@
     );
     window.location.reload();
   };
+
   GM_registerMenuCommand("⚙️ Configure Jellyfin Script", runFullConfig);
   GM_addStyle(`
-        .jellyfin-link {
+          .jellyfin-link {
             display: inline-block;
             margin-left: 15px;
             padding: 5px 10px;
@@ -72,23 +74,32 @@
             text-decoration: none;
             font-size: 14px;
             font-weight: bold;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family:
+              -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+              Arial, sans-serif;
             line-height: 1.2; /* Prevent text from being cut off */
-        }
-        .jellyfin-link-found {
-            background-color: #4CAF50; /* Green */
-        }
-        .jellyfin-link-not-found {
+          }
+          .tag:not(body).nyaa-link-found,
+          .jellyfin-link-found {
+            background-color: #4caf50; /* Green */
+          }
+          .tag:not(body).nyaa-link-not-found,
+          .jellyfin-link-not-found {
             background-color: #f44336; /* Red */
-        }
-        .jellyfin-link-searching {
+          }
+          .tag:not(body).nyaa-link-click-to-search{
+            background-color: #8caaee
+          }
+          .tag:not(body).nyaa-link-searching,
+          .jellyfin-link-searching {
             background-color: #818589; /* Grey */
-        }
-        .jellyfin-link-failed {
+          }
+          .tag:not(body).nyaa-link-failed,
+          .jellyfin-link-failed {
             background-color: #cc0000; /* Darker Red */
             cursor: not-allowed;
-        }
-        #jellyfin-config-banner {
+          }
+          #jellyfin-config-banner {
             position: fixed;
             top: 0;
             left: 0;
@@ -99,10 +110,12 @@
             text-align: center;
             font-size: 16px;
             z-index: 9999;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        #jellyfin-config-banner button {
+            font-family:
+              -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+              Arial, sans-serif;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+          }
+          #jellyfin-config-banner button {
             margin-left: 15px;
             padding: 5px 10px;
             border: none;
@@ -111,12 +124,30 @@
             color: #f44336;
             font-weight: bold;
             cursor: pointer;
-        }
+          }
     `);
   const site_observers = {
     "javdb.com": {
       isOkToAdd: () => {
         return document.querySelectorAll("div.movie-list>div.item").length > 0;
+      },
+      addSearchBtn: (item) => {
+        const originalTag = item.querySelector("div.tags>span.tag");
+        if (originalTag && originalTag.textContent[0] === "含") {
+          // no need to search
+        } else {
+          // need to search
+          const keyword = item.querySelector(
+            "div.video-title>strong",
+          ).textContent;
+          if (!keyword) {
+            console.log("No keyword extracted from the item.");
+            return;
+          }
+          const newTag = document.createElement("span");
+          newTag.classList.add("tag", "nyaa-link", "nyaa-link-click-to-search");
+          create_search_element(newTag, keyword, getOffkabNyaa);
+        }
       },
       getObserveElements: () => {
         return document.querySelectorAll("div.movie-list>div.item");
@@ -172,7 +203,7 @@
           "jellyfin-status-div",
         );
         newDiv.style.padding = "2px 2px";
-        item.children[0].insertBefore(newDiv, item.children[0].lastChild)
+        item.children[0].insertBefore(newDiv, item.children[0].lastChild);
         const getSearchResponse = async () => {
           console.log(`search with ${keyword}`);
           return jellyfinRequester.searchJellyfin(keyword);
@@ -278,6 +309,51 @@
     }
   };
 
+  const create_search_element = async (element, keyword, searchFunc) => {
+    const threshold = 1000;
+    let timeout = null;
+
+    function mouseoverHandler() {
+      timeout = setTimeout(async () => {
+        element.textContent = "⏳ Searching...";
+        element.classList.replace(
+          "nyaa-link-click-to-search",
+          "nyaa-link-searching",
+        );
+        try {
+          const result = await searchFunc(keyword);
+          if (result.length > 0) {
+            console.log(result);
+            element.textContent = "✅ Found";
+            element.classList.replace("nyaa-link-searching", "nyaa-link-found");
+            element.addEventListener("click", () => {
+              GM_openInTab(result[0].url, { active: true });
+            });
+          } else {
+            element.textContent = "❌ Not found";
+            element.classList.replace(
+              "nyaa-link-searching",
+              "nyaa-link-not-found",
+            );
+          }
+        } catch (error) {
+          console.error("Failed to search: ", error);
+          element.textContent = "⚠️ Error";
+          element.classList.replace("nyaa-link-searching", "nyaa-link-failed");
+        }
+        element.removeEventListener("mouseover", mouseoverHandler);
+        element.removeEventListener("mouseout", mouseoutHandler);
+      }, threshold);
+    }
+    function mouseoutHandler() {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+    element.addEventListener("mouseover", mouseoverHandler);
+    element.addEventListener("mouseout", mouseoutHandler);
+  };
+
   let isObserver = null;
   const main_func = async () => {
     console.log("search on jellyfin loaded");
@@ -321,6 +397,9 @@
         );
         items.forEach((item) => {
           isObserver.observe(item);
+          if (site_observer.addSearchBtn) {
+            site_observer.addSearchBtn(item);
+          }
         });
       }
     }
