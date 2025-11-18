@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1b
+// @version      2.1c
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -136,10 +136,10 @@
         return document.querySelectorAll("div.movie-list>div.item").length > 0;
       },
       addSearchBtn: (item) => {
-        const anchor = item.querySelector("div.tags");
+        const tagsDiv = item.querySelector("div.tags");
         if (
-          anchor.children.length === 0 ||
-          anchor.children[0].textContent[0] !== "含"
+          tagsDiv.children.length === 0 ||
+          tagsDiv.children[0].textContent[0] !== "含"
         ) {
           const keyword = item.querySelector(
             "div.video-title>strong",
@@ -150,9 +150,9 @@
           }
           const newTag = document.createElement("span");
           newTag.classList.add("tag", "nyaa-link", "nyaa-link-click-to-search");
-          newTag.textContent = "🔍 Hover to Search"
+          newTag.textContent = "🔍 Hover to Search";
           create_search_element(newTag, keyword, getOffkabNyaa);
-          anchor.appendChild(newTag);
+          item.querySelector("div.jellyfin-status-div").appendChild(newTag);
         }
       },
       getObserveElements: () => {
