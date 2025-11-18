@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1c
+// @version      2.1e
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -152,7 +152,7 @@
           newTag.classList.add("tag", "nyaa-link", "nyaa-link-click-to-search");
           newTag.textContent = "🔍 Hover to Search";
           create_search_element(newTag, keyword, getOffkabNyaa);
-          item.querySelector("div.jellyfin-status-div").appendChild(newTag);
+          tagsDiv.appendChild(newTag);
         }
       },
       getObserveElements: () => {
@@ -333,7 +333,7 @@
             element.textContent = "✅ Found";
             element.classList.replace("nyaa-link-searching", "nyaa-link-found");
             element.addEventListener("click", () => {
-              GM_openInTab(result[0].url, { active: true });
+              GM_openInTab(`https://sukebei.nyaa.si${result[0].url}`, { active: true });
             });
           } else {
             element.textContent = "❌ Not found";
