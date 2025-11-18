@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      0.1.1
+// @version      0.1.2
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -9,8 +9,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=jellyfin.org
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
-// @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @connect      192.168.52.2
 // @require      https://raw.githubusercontent.com/nasirHo/my-user-scripts/refs/heads/main/lib/utils.js
@@ -31,7 +31,11 @@
   );
   const JELLYFIN_API_KEY = GM_getValue("JELLYFIN_API_KEY", "");
   const JELLYFIN_LIB_ID = GM_getValue("JELLYFIN_LIB_ID", "");
-  const jellyfinRequester = getJellyfinRequester(JELLYFIN_API_URL, JELLYFIN_API_KEY, JELLYFIN_LIB_ID);
+  const jellyfinRequester = getJellyfinRequester(
+    JELLYFIN_API_URL,
+    JELLYFIN_API_KEY,
+    JELLYFIN_LIB_ID,
+  );
 
   const runFullConfig = () => {
     const key = prompt("Enter your Jellyfin API Key", JELLYFIN_API_KEY);
@@ -141,6 +145,41 @@
         await fetch_and_set_icon(getSearchResponse, newDiv, "/details?id=");
       },
     },
+    "avbase.net": {
+      isOkToAdd: () => {
+        return document.querySelectorAll("div.grid>div.relative").length > 0;
+      },
+      getObserveElements: () => {
+        return document.querySelectorAll("div.grid>div.relative");
+      },
+      observeFunc: async (item) => {
+        if (item.querySelector(".jellyfin-status-div")) {
+          return;
+        }
+        const keyword = item.querySelector("div.grow>div>span").textContent;
+        if (!keyword) {
+          console.log("No keyword extracted from the item.");
+          return;
+        }
+        const newDiv = document.createElement("div");
+        newDiv.classList.add(
+          "p-2",
+          "flex",
+          "flex-wrap",
+          "gap-2",
+          "border-y",
+          "border-light",
+          "jellyfin-status-div",
+        );
+        newDiv.style.padding = "2px 2px";
+        item.children[0].insertBefore(newDiv, item.children[0].lastChild)
+        const getSearchResponse = async () => {
+          console.log(`search with ${keyword}`);
+          return jellyfinRequester.searchJellyfin(keyword);
+        };
+        await fetch_and_set_icon(getSearchResponse, newDiv, "/details?id=");
+      },
+    },
   };
 
   const site_settings = {
@@ -169,29 +208,6 @@
       },
       getSearch: jellyfinRequester.searchPersonOnJellyfin,
       resultPath: "/list?type=Movie&personId=",
-      getObserveElements: () => {
-        return document.querySelectorAll("div.movie-list>div.item");
-      },
-      observeFunc: async (item) => {
-        const keyword = item.querySelector(
-          "div.video-title>strong",
-        ).textContent;
-        if (!keyword) {
-          console.log("No keyword extracted from the item.");
-          return;
-        }
-        item.querySelector("a.box").style.marginBottom = 0;
-        const newDiv = document.createElement("div");
-        newDiv.classList.add("box");
-        newDiv.style.textAlign = "center";
-        newDiv.style.padding = "2px 2px";
-        item.appendChild(newDiv);
-        const getSearchResponse = async () => {
-          console.log(`search with ${keyword}`);
-          return jellyfinRequester.searchJellyfin(keyword);
-        };
-        await fetch_and_set_icon(getSearchResponse, newDiv, "/details?id=");
-      },
     },
     "avbase.net/works": {
       getAnchor: () => {
@@ -283,7 +299,6 @@
       site_observers[window.location.hostname.replace("www\.", "")];
 
     if (site_observer !== undefined && site_observer.isOkToAdd()) {
-      //if (site_conf.getObserveElements){
       const items = site_observer.getObserveElements();
       if (items.length > 0) {
         isObserver = new IntersectionObserver(
