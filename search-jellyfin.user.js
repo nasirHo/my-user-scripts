@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1f
+// @version      2.1g
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -188,7 +188,7 @@
       },
       addSearchBtn: (item) => {
         const anchorDiv = item.querySelector(".jellyfin-status-div");
-        const keyword = item.querySelector("div.grow>div>span").textContent;
+        const keyword = item.querySelector("div.grow>div").lastChild.textContent;
         if (!keyword) {
           console.log("No keyword extracted from the item.");
           return;
@@ -206,7 +206,7 @@
         if (item.querySelector(".jellyfin-status-div")) {
           return;
         }
-        const keyword = item.querySelector("div.grow>div>span").textContent;
+        const keyword = item.querySelector("div.grow>div").lastChild.textContent;
         if (!keyword) {
           console.log("No keyword extracted from the item.");
           return;
