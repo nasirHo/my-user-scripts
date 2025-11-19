@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1h
+// @version      2.2a
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -222,7 +222,7 @@
           "jellyfin-status-div",
         );
         newDiv.style.padding = "2px 2px";
-        item.children[0].insertBefore(newDiv, item.children[0].lastChild);
+        item.lastChild.insertBefore(newDiv, item.lastChild.lastChild);
         const getSearchResponse = async () => {
           console.log(`search with ${keyword}`);
           return jellyfinRequester.searchJellyfin(keyword);
