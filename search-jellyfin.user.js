@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1g
+// @version      2.1h
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -455,15 +455,17 @@
   main_func();
 
   const observeUrlChange = () => {
-    let oldPath = document.location.pathname;
+    let oldPath = document.location.href;
     const observer = new MutationObserver((mutations) => {
-      const newPath = document.location.pathname;
+      const newPath = document.location.href;
       if (oldPath !== newPath) {
         oldPath = newPath;
         console.log("URL path changed, re-running script.");
 
         // Remove any old icons before running again
+        document.querySelectorAll(".jellyfin-status-div").forEach((e) => e.remove());
         document.querySelectorAll(".jellyfin-link").forEach((e) => e.remove());
+        document.querySelectorAll(".nyaa-link").forEach((e) => e.remove());
         if (isObserver) {
           isObserver.disconnect();
           isObserver = null;
