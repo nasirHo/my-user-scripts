@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Search on Jellyfin
 // @namespace    http://tampermonkey.net/
-// @version      2.1e
+// @version      2.1f
 // @description  Show jellyfin query result on certain website
 // @author       nasirho
 // @match        https://javdb.com/*
@@ -186,6 +186,19 @@
       isOkToAdd: () => {
         return document.querySelectorAll("div.grid>div.relative").length > 0;
       },
+      addSearchBtn: (item) => {
+        const anchorDiv = item.querySelector(".jellyfin-status-div");
+        const keyword = item.querySelector("div.grow>div>span").textContent;
+        if (!keyword) {
+          console.log("No keyword extracted from the item.");
+          return;
+        }
+        const newTag = document.createElement("span");
+        newTag.classList.add("tag", "nyaa-link", "nyaa-link-click-to-search");
+        newTag.textContent = "🔍 Hover to Search";
+        create_search_element(newTag, keyword, getOffkabNyaa);
+        anchorDiv.appendChild(newTag);
+      },
       getObserveElements: () => {
         return document.querySelectorAll("div.grid>div.relative");
       },
@@ -333,7 +346,9 @@
             element.textContent = "✅ Found";
             element.classList.replace("nyaa-link-searching", "nyaa-link-found");
             element.addEventListener("click", () => {
-              GM_openInTab(`https://sukebei.nyaa.si${result[0].url}`, { active: true });
+              GM_openInTab(`https://sukebei.nyaa.si${result[0].url}`, {
+                active: true,
+              });
             });
           } else {
             element.textContent = "❌ Not found";
@@ -394,6 +409,9 @@
                 item.dataset.jellyfinLoading = "true";
                 obs.unobserve(item);
                 await site_observer.observeFunc(item);
+                if (site_observer.addSearchBtn) {
+                  site_observer.addSearchBtn(item);
+                }
               }
             }
           },
@@ -403,9 +421,9 @@
         );
         items.forEach((item) => {
           isObserver.observe(item);
-          if (site_observer.addSearchBtn) {
-            site_observer.addSearchBtn(item);
-          }
+          // if (site_observer.addSearchBtn) {
+          //   site_observer.addSearchBtn(item);
+          // }
         });
       }
     }
